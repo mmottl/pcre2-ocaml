@@ -27,7 +27,7 @@
 #endif
 #endif
 
-#if _WIN64
+#if defined(_WIN64)
 typedef long long *caml_int_ptr;
 #else
 typedef long *caml_int_ptr;
@@ -58,7 +58,6 @@ typedef const unsigned char *chartables; /* Type of chartable sets */
 
 /* Contents of callout data */
 struct cod {
-  long subj_start;       /* Start of subject string */
   value *v_substrings_p; /* Pointer to substrings matched so far */
   value *v_cof_p;        /* Pointer to callout function */
   value v_exn;           /* Possible exception raised by callout function */
@@ -105,20 +104,13 @@ struct pcre2_ocaml_tables {
    and OCaml chooses the larger possibility for representing integers when
    available (also in arrays) - not so the PCRE!
 */
-static inline void copy_ovector(long subj_start, const size_t *ovec_src,
-                                caml_int_ptr ovec_dst, uint32_t subgroups2) {
-  if (subj_start == 0)
-    while (subgroups2--) {
-      *ovec_dst = Val_int(*ovec_src);
-      --ovec_src;
-      --ovec_dst;
-    }
-  else
-    while (subgroups2--) {
-      *ovec_dst = Val_long(*ovec_src + subj_start);
-      --ovec_src;
-      --ovec_dst;
-    }
+static inline void copy_ovector(const size_t *ovec_src, caml_int_ptr ovec_dst,
+                                uint32_t subgroups2) {
+  while (subgroups2--) {
+    *ovec_dst = Val_int(*ovec_src);
+    --ovec_src;
+    --ovec_dst;
+  }
 }
 
 /* Callout handler */
@@ -139,14 +131,13 @@ static int pcre2_callout_handler(pcre2_callout_block *cb, struct cod *cod) {
     const size_t *ovec_src = cb->offset_vector + subgroups2_1;
     caml_int_ptr ovec_dst =
         (long *)&Field(Field(v_substrings, 1), 0) + subgroups2_1;
-    long subj_start = cod->subj_start;
 
-    copy_ovector(subj_start, ovec_src, ovec_dst, subgroups2);
+    copy_ovector(ovec_src, ovec_dst, subgroups2);
 
     Field(v_callout_data, 0) = Val_int(cb->callout_number);
     Field(v_callout_data, 1) = v_substrings;
-    Field(v_callout_data, 2) = Val_int(cb->start_match + subj_start);
-    Field(v_callout_data, 3) = Val_int(cb->current_position + subj_start);
+    Field(v_callout_data, 2) = Val_int(cb->start_match);
+    Field(v_callout_data, 3) = Val_int(cb->current_position);
     Field(v_callout_data, 4) = Val_int(capture_top);
     Field(v_callout_data, 5) = Val_int(cb->capture_last);
     Field(v_callout_data, 6) = Val_int(cb->pattern_position);
@@ -349,7 +340,7 @@ static inline int pcre2_pattern_info_stub(value v_rex, int what, void *where) {
 /* Some stubs for info-functions */
 
 /* Generic macro for getting integer results from pcre2_pattern_info */
-#define make_intnat_info(tp, name, option)                                     \
+#define MAKE_INTNAT_INFO(tp, name, option)                                     \
   CAMLprim intnat pcre2_##name##_stub(value v_rex) {                           \
     tp options;                                                                \
     const int ret =                                                            \
@@ -363,13 +354,13 @@ static inline int pcre2_pattern_info_stub(value v_rex, int what, void *where) {
     return Val_int(pcre2_##name##_stub(v_rex));                                \
   }
 
-make_intnat_info(size_t, size, SIZE)
-    make_intnat_info(int, capturecount, CAPTURECOUNT)
-        make_intnat_info(int, backrefmax, BACKREFMAX)
-            make_intnat_info(int, namecount, NAMECOUNT)
-                make_intnat_info(int, nameentrysize, NAMEENTRYSIZE)
+MAKE_INTNAT_INFO(size_t, size, SIZE)
+MAKE_INTNAT_INFO(int, capturecount, CAPTURECOUNT)
+MAKE_INTNAT_INFO(int, backrefmax, BACKREFMAX)
+MAKE_INTNAT_INFO(int, namecount, NAMECOUNT)
+MAKE_INTNAT_INFO(int, nameentrysize, NAMEENTRYSIZE)
 
-                    CAMLprim int64_t pcre2_argoptions_stub(value v_rex) {
+CAMLprim int64_t pcre2_argoptions_stub(value v_rex) {
   uint32_t options;
   const int ret =
       pcre2_pattern_info_stub(v_rex, PCRE2_INFO_ARGOPTIONS, &options);
@@ -472,47 +463,38 @@ static inline void handle_match_error(char *loc, const int ret) {
 }
 
 static inline void handle_pcre2_match_result(size_t *ovec, value v_ovec,
-                                             size_t ovec_len, long subj_start,
-                                             uint32_t ret) {
+                                             size_t ovec_len, uint32_t ret) {
   caml_int_ptr ocaml_ovec = (caml_int_ptr)&Field(v_ovec, 0);
   const uint32_t subgroups2 = ret * 2;
   const uint32_t subgroups2_1 = subgroups2 - 1;
   const size_t *ovec_src = ovec + subgroups2_1;
   caml_int_ptr ovec_clear_stop = ocaml_ovec + (ovec_len * 2) / 3;
   caml_int_ptr ovec_dst = ocaml_ovec + subgroups2_1;
-  copy_ovector(subj_start, ovec_src, ovec_dst, subgroups2);
+  copy_ovector(ovec_src, ovec_dst, subgroups2);
   while (++ovec_dst < ovec_clear_stop)
     *ovec_dst = -1;
 }
 
 /* Executes a pattern match with runtime options, a regular expression, a
-   matching position, the start of the the subject string, a subject string,
+   matching position, the start of the subject string, a subject string,
    a number of subgroup offsets, an offset vector and an optional callout
    function */
 
 CAMLprim value pcre2_match_stub0(int64_t v_opt, value v_rex, intnat v_pos,
-                                 intnat v_subj_start, value v_subj,
-                                 value v_ovec, value v_maybe_cof,
+                                 value v_subj, value v_ovec, value v_maybe_cof,
                                  value v_workspace) {
   int ret;
   int is_dfa = v_workspace != (value)NULL;
-  long pos = v_pos, subj_start = v_subj_start;
+  long pos = v_pos;
   size_t ovec_len = Wosize_val(v_ovec), len = caml_string_length(v_subj);
 
-  if (pos > (long)len || pos < subj_start)
+  if (pos > (long)len || pos < 0)
     caml_invalid_argument("Pcre2.pcre2_match_stub: illegal position");
-
-  if (subj_start > (long)len || subj_start < 0)
-    caml_invalid_argument("Pcre2.pcre2_match_stub: illegal subject start");
-
-  pos -= subj_start;
-  len -= subj_start;
 
   {
     const pcre2_code *code = get_rex(v_rex);             /* Compiled pattern */
     pcre2_match_context *mcontext = get_mcontext(v_rex); /* Match context */
-    PCRE2_SPTR ocaml_subj =
-        (PCRE2_SPTR)String_val(v_subj) + subj_start; /* Subject string */
+    PCRE2_SPTR ocaml_subj = (PCRE2_SPTR)String_val(v_subj); /* Subject string */
 
     pcre2_match_data *match_data =
         pcre2_match_data_create_from_pattern(code, NULL);
@@ -534,7 +516,7 @@ CAMLprim value pcre2_match_stub0(int64_t v_opt, value v_rex, intnat v_pos,
         pcre2_match_data_free(match_data);
         handle_match_error("pcre2_match_stub", ret);
       } else {
-        handle_pcre2_match_result(ovec, v_ovec, ovec_len, subj_start, ret);
+        handle_pcre2_match_result(ovec, v_ovec, ovec_len, ret);
       }
     }
 
@@ -545,7 +527,7 @@ CAMLprim value pcre2_match_stub0(int64_t v_opt, value v_rex, intnat v_pos,
       PCRE2_UCHAR *subj = caml_stat_alloc(sizeof(char) * len);
       int workspace_len;
       int *workspace;
-      struct cod cod = {0, (value *)NULL, (value *)NULL, (value)NULL};
+      struct cod cod = {(value *)NULL, (value *)NULL, (value)NULL};
       pcre2_match_context *new_mcontext = pcre2_match_context_copy(mcontext);
 
       pcre2_set_callout(
@@ -553,7 +535,6 @@ CAMLprim value pcre2_match_stub0(int64_t v_opt, value v_rex, intnat v_pos,
           (int (*)(pcre2_callout_block_8 *, void *))&pcre2_callout_handler,
           &cod);
 
-      cod.subj_start = subj_start;
       memcpy(subj, ocaml_subj, len);
 
       Begin_roots4(v_rex, v_cof, v_substrings, v_ovec);
@@ -591,7 +572,7 @@ CAMLprim value pcre2_match_stub0(int64_t v_opt, value v_rex, intnat v_pos,
         else
           handle_match_error("pcre2_match_stub(callout)", ret);
       } else {
-        handle_pcre2_match_result(ovec, v_ovec, ovec_len, subj_start, ret);
+        handle_pcre2_match_result(ovec, v_ovec, ovec_len, ret);
         if (is_dfa) {
           caml_int_ptr ocaml_workspace_dst =
               (caml_int_ptr)&Field(v_workspace, 0);
@@ -613,26 +594,23 @@ CAMLprim value pcre2_match_stub0(int64_t v_opt, value v_rex, intnat v_pos,
 }
 
 CAMLprim value pcre2_match_stub(int64_t v_opt, value v_rex, intnat v_pos,
-                                intnat v_subj_start, value v_subj, value v_ovec,
-                                value v_maybe_cof) {
-  return pcre2_match_stub0(v_opt, v_rex, v_pos, v_subj_start, v_subj, v_ovec,
-                           v_maybe_cof, (value)NULL);
+                                value v_subj, value v_ovec, value v_maybe_cof) {
+  return pcre2_match_stub0(v_opt, v_rex, v_pos, v_subj, v_ovec, v_maybe_cof,
+                           (value)NULL);
 }
 
 /* Byte-code hook for pcre2_match_stub
    Needed, because there are more than 5 arguments */
 CAMLprim value pcre2_match_stub_bc(value *argv, int __unused argn) {
   return pcre2_match_stub0(Int64_val(argv[0]), argv[1], Int_val(argv[2]),
-                           Int_val(argv[3]), argv[4], argv[5], argv[6],
-                           (value)NULL);
+                           argv[3], argv[4], argv[5], (value)NULL);
 }
 
 /* Byte-code hook for pcre2_dfa_match_stub
    Needed, because there are more than 5 arguments */
 CAMLprim value pcre2_dfa_match_stub_bc(value *argv, int __unused argn) {
   return pcre2_match_stub0(Int64_val(argv[0]), argv[1], Int_val(argv[2]),
-                           Int_val(argv[3]), argv[4], argv[5], argv[6],
-                           argv[7]);
+                           argv[3], argv[4], argv[5], argv[6]);
 }
 
 static struct custom_operations tables_ops = {
