@@ -139,7 +139,8 @@ static int pcre2_callout_handler(pcre2_callout_block *cb, struct cod *cod) {
     const uint32_t subgroups2_1 = subgroups2 - 1;
 
     const size_t *ovec_src = cb->offset_vector + subgroups2_1;
-    caml_int_ptr ovec_dst = &Field(Field(v_substrings, 1), 0) + subgroups2_1;
+    caml_int_ptr ovec_dst =
+        (long *)&Field(Field(v_substrings, 1), 0) + subgroups2_1;
     long subj_start = cod->subj_start;
 
     copy_ovector(subj_start, ovec_src, ovec_dst, subgroups2);
@@ -202,17 +203,19 @@ static void pcre2_dealloc_regexp(value v_rex) {
 CAMLnoreturn_start static inline void
 raise_pcre2_error(value v_arg) CAMLnoreturn_end;
 
-CAMLnoreturn_start static inline void raise_partial() CAMLnoreturn_end;
+CAMLnoreturn_start static inline void raise_partial(void) CAMLnoreturn_end;
 
-CAMLnoreturn_start static inline void raise_bad_utf() CAMLnoreturn_end;
+CAMLnoreturn_start static inline void raise_bad_utf(void) CAMLnoreturn_end;
 
-CAMLnoreturn_start static inline void raise_bad_utf_offset() CAMLnoreturn_end;
+CAMLnoreturn_start static inline void
+raise_bad_utf_offset(void) CAMLnoreturn_end;
 
-CAMLnoreturn_start static inline void raise_match_limit() CAMLnoreturn_end;
+CAMLnoreturn_start static inline void raise_match_limit(void) CAMLnoreturn_end;
 
-CAMLnoreturn_start static inline void raise_depth_limit() CAMLnoreturn_end;
+CAMLnoreturn_start static inline void raise_depth_limit(void) CAMLnoreturn_end;
 
-CAMLnoreturn_start static inline void raise_workspace_size() CAMLnoreturn_end;
+CAMLnoreturn_start static inline void
+raise_workspace_size(void) CAMLnoreturn_end;
 
 CAMLnoreturn_start static inline void
 raise_bad_pattern(int code, size_t pos) CAMLnoreturn_end;
@@ -224,12 +227,12 @@ static inline void raise_pcre2_error(value v_arg) {
   caml_raise_with_arg(*pcre2_exc_Error, v_arg);
 }
 
-static inline void raise_partial() { raise_pcre2_error(Val_int(0)); }
-static inline void raise_bad_utf() { raise_pcre2_error(Val_int(1)); }
-static inline void raise_bad_utf_offset() { raise_pcre2_error(Val_int(2)); }
-static inline void raise_match_limit() { raise_pcre2_error(Val_int(3)); }
-static inline void raise_depth_limit() { raise_pcre2_error(Val_int(4)); }
-static inline void raise_workspace_size() { raise_pcre2_error(Val_int(5)); }
+static inline void raise_partial(void) { raise_pcre2_error(Val_int(0)); }
+static inline void raise_bad_utf(void) { raise_pcre2_error(Val_int(1)); }
+static inline void raise_bad_utf_offset(void) { raise_pcre2_error(Val_int(2)); }
+static inline void raise_match_limit(void) { raise_pcre2_error(Val_int(3)); }
+static inline void raise_depth_limit(void) { raise_pcre2_error(Val_int(4)); }
+static inline void raise_workspace_size(void) { raise_pcre2_error(Val_int(5)); }
 
 static inline void raise_bad_pattern(int code, size_t pos) {
   CAMLparam0();
