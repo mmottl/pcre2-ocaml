@@ -18,6 +18,8 @@
 
 (* Public exceptions and their registration with the C runtime *)
 
+open Printf
+
 type error =
   | Partial
   | BadPattern of string * int
@@ -28,9 +30,28 @@ type error =
   | WorkspaceSize
   | InternalError of string
 
+let string_of_error = function
+  | Partial -> "Partial"
+  | BadPattern (msg, pos) -> sprintf "Pcre2.BadPattern(%S, pos=%i)" msg pos
+  | BadUTF -> "BadUTF"
+  | BadUTFOffset -> "BadUTFOffset"
+  | MatchLimit -> "MatchLimit"
+  | DepthLimit -> "DepthLimit"
+  | WorkspaceSize -> "WorkspaceSize"
+  | InternalError msg -> sprintf "InternalError(%S)" msg
+
 exception Error of error
 exception Backtrack
 exception Regexp_or of string * error
+
+let string_of_exn = function
+  | Error error -> Some (sprintf "Pcre2.Error(%s)" (string_of_error error))
+  | Backtrack -> Some "Pcre2.Backtrack"
+  | Regexp_or (pat, error) ->
+      Some (sprintf "Pcre2.Regexp_or(pat=%S, %s)" pat (string_of_error error))
+  | _not_from_pcre -> None
+
+let () = Printexc.register_printer string_of_exn
 
 (* Puts exceptions into global C-variables for fast retrieval *)
 external pcre2_ocaml_init : unit -> unit = "pcre2_ocaml_init"
