@@ -1,12 +1,11 @@
 # Changelog
 
-## 8.0.0 (2024-12-17)
+## 8.0.1 (2024-12-20)
 
 - Merged all changes from old `pcre-ocaml`.
 
-- Removed superfluous and buggy `subj_start` argument. This fixes a bug in
-  the `full_split` function where non-capturing groups are not identified
-  as such.
+- Fixed a bug in the `full_split` function where non-capturing groups were
+  not identified as such.
 
 ## 7.5.2 (2023-09-06)
 
