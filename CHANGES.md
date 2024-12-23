@@ -1,5 +1,9 @@
 # pcre2-ocaml changelog
 
+## 7.5.3 (2024-12-23)
+
+* @mmottl fixed bug in `full_split`
+
 ## 7.5.2 (2023-09-06)
 
 * fixed bug in `full_split`, added first unit-test for same
