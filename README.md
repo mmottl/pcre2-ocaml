@@ -1,130 +1,115 @@
-## PCRE2-OCaml - Perl Compatibility Regular Expressions for OCaml
+# PCRE2-OCaml - Perl Compatibility Regular Expressions for OCaml
 
-Fork of the original [pcre-ocaml project](https://github.com/mmottl/pcre-ocaml) for PCRE2 support.
+Fork of the original [pcre-ocaml project](https://github.com/mmottl/pcre-ocaml)
+for PCRE2 support.
 
-These are the bindings as needed by the [Haxe compiler](https://github.com/HaxeFoundation/haxe). I do not plan on maintaining this repository.
+These are the bindings as needed by the [Haxe
+compiler](https://github.com/HaxeFoundation/haxe). I do not plan on maintaining
+this repository.
 
-This [OCaml](https://www.ocaml.org)-library interfaces the C-library
-[PCRE2](https://www.pcre.org) (Perl-compatibility Regular Expressions).  It can be
-used for string matching with "PERL"-style regular expressions.
+This [OCaml](http://www.ocaml.org) library interfaces with the C library
+[PCRE2](http://www.pcre.org), providing Perl-compatible regular expressions
+for string matching.
 
-### Features
+## Features
 
-PCRE2-OCaml offers the following functionality for operating on strings:
+PCRE2-OCaml offers:
 
-  * Searching for patterns
-  * Extracting subpatterns
-  * Splitting strings according to patterns
-  * Pattern substitution
+- Pattern searching
+- Subpattern extraction
+- String splitting by patterns
+- Pattern substitution
 
-Other reasons to use PCRE2-OCaml:
+Reasons to choose PCRE2-OCaml:
 
-  * The PCRE2-library by Philip Hazel has been under development for many
-    years and is fairly advanced and stable.  It implements just about all
-    of the functionality that can be found in PERL regular expressions.
-    The higher-level functions written in OCaml (split, replace, etc.),
-    too, are compatible with the corresponding PERL-functions to the extent
-    that OCaml allows.  Most people find the syntax of PERL-style regular
-    expressions more straightforward and powerful than the Emacs-style regular
-    expressions used in the `Str`-module in the standard OCaml distribution.
+- The PCRE2 library by Philip Hazel is mature and stable, implementing nearly
+  all Perl regular expression features. High-level OCaml functions (split,
+  replace, etc.) are compatible with Perl functions, as much as OCaml allows.
+  Some developers find Perl-style regex syntax more intuitive and powerful
+  than the Emacs-style regex used in OCaml's `Str` module.
 
-  * PCRE2-OCaml is reentrant and thus thread-safe, which is not the case
-    for the `Str`-module in the OCaml standard library.  Using reentrant
-    libraries also means more convenience for programmers.  They do not
-    have to reason about states in which the library might be in.
+- PCRE2-OCaml is reentrant and thread-safe, unlike the `Str` module. This
+  reentrancy offers convenience, eliminating concerns about library state.
 
-  * The high-level functions for replacement and substitution, which are all
-    implemented in OCaml, are much faster than the ones in the `Str`-module.
-    In fact, when compiled to native code, they even seem to be significantly
-    faster than those found in PERL (PERL is written in C).
+- High-level replacement and substitution functions in OCaml are faster than
+  those in the `Str` module. When compiled to native code, they can even
+  outperform Perl's C-based functions.
 
-  * You can rely on the data returned being unique.  In other terms: if
-    the result of a function is a string, you can safely use destructive
-    updates on it without having to fear side effects.
+- Returned data is unique, allowing safe destructive updates without side
+  effects.
 
-  * The interface to the library makes use of labels and default arguments
-    to give you a high degree of programming comfort.
+- The library interface uses labels and default arguments for enhanced
+  programming comfort.
 
-### Usage
+## Usage
 
-Please run
+Please run:
+
 ```
 $ odig odoc pcre2
 ```
-or (maybe?)
+
+Or (maybe?):
+
 ```
 $ dune build @doc
 ```
 
-to build API documentation, or consult the old PCRE
-[API](https://mmottl.github.io/pcre-ocaml/api/pcre).
+Functions support two flag types:
 
-A general concept the user may need to understand is that most functions
-allow for two different kinds of flags:
+1. **Convenience flags**: Readable and concise, translated internally on each
+   call. Example:
 
-  1. "Convenience"-flags that make for readable and concise code, but which
-     need to be translated to an internal representation on each call.
-     Example:
+   ```ocaml
+   let rex = Pcre2.regexp ~flags:[`ANCHORED; `CASELESS] "some pattern" in
+   (* ... *)
+   ```
 
-     ```ocaml
-     let rex = Pcre2.regexp ~flags:[`ANCHORED; `CASELESS] "some pattern" in
+   These are easy to use but may incur overhead in loops. For performance
+   optimization, consider the next approach.
+
+2. **Internal flags**: Predefined and translated from convenience flags for
+   optimal loop performance. Example:
+
+   ```ocaml
+   let iflags = Pcre2.cflags [`ANCHORED; `CASELESS] in
+   for i = 1 to 1000 do
+     let rex = Pcre2.regexp ~iflags "some pattern constructed at runtime" in
      (* ... *)
-     ```
+   done
+   ```
 
-     This makes it easy to pass flags on the fly.  They will be translated to
-     the internal format automatically.  However, if this happens to be in a
-     loop, this translation will occur on each iteration.  If you really need
-     to save as much performance as possible, you should use the next approach.
+   Translating flags outside loops saves cycles. Avoid creating regex in
+   loops:
 
-  2. "Internal" flags that need to be defined and translated from
-     "convenience"-flags before function calls, but which allow for optimum
-     performance in loops.  Example:
+   ```ocaml
+   for i = 1 to 1000 do
+     let chunks = Pcre2.split ~pat:"[ \t]+" "foo bar" in
+     (* ... *)
+   done
+   ```
 
-     ```ocaml
-     let iflags = Pcre2.cflags [`ANCHORED; `CASELESS] in
-     for i = 1 to 1000 do
-       let rex = Pcre2.regexp ~iflags "some pattern constructed at runtime" in
-       (* ... *)
-     done
-     ```
+   Instead, predefine the regex:
 
-      Factoring out the translation of flags for regular expressions may
-      save some cycles, but don't expect too much.  You can save more CPU
-      time when lifting the creation of regular expressions out of loops.
-      Example for what not to do:
+   ```ocaml
+   let rex = Pcre2.regexp "[ \t]+" in
+   for i = 1 to 1000 do
+     let chunks = Pcre2.split ~rex "foo bar" in
+     (* ... *)
+   done
+   ```
 
-      ```ocaml
-      for i = 1 to 1000 do
-        let chunks = Pcre2.split ~pat:"[ \t]+" "foo bar" in
-        (* ... *)
-      done
-      ```
+Functions use optional arguments with intuitive defaults. For instance,
+`Pcre2.split` defaults to whitespace as the pattern. The `examples` directory
+contains applications demonstrating PCRE2-OCaml's functionality.
 
-      Better:
+## Restartable (Partial) Pattern Matching
 
-      ```ocaml
-      let rex = Pcre2.regexp "[ \t]+" in
-      for i = 1 to 1000 do
-        let chunks = Pcre2.split ~rex "foo bar" in
-        (* ... *)
-      done
-      ```
+PCRE2 includes a DFA match function for restarting partial matches with new
+input, exposed via `pcre2_dfa_exec`. While not suitable for extracting
+submatches or splitting strings, it's useful for streaming and search tasks.
 
-The provided functions use optional arguments with intuitive defaults.  For
-example, the `Pcre2.split`-function will assume whitespace as pattern.  The
-`examples`-directory contains a few example applications demonstrating the
-functionality of PCRE2-OCaml.
-
-#### Restartable (partial) pattern matching
-
-PCRE includes an "alternative" DFA match function that allows one to restart
-a partial match with additional input.  This is exposed by `pcre2-ocaml` via
-the `pcre2_dfa_match` function.  While this cannot be used for "higher-level"
-operations like extracting submatches or splitting subject strings, it can
-be very useful in certain streaming and search use cases.
-
-This `utop` interaction demonstrates the basic workflow of a partial match
-that is then restarted multiple times before completing successfully:
+Example of a partial match restarted:
 
 ```ocaml
 utop # open Pcre2;;
@@ -144,12 +129,12 @@ utop # pcre2_dfa_exec ~rex ~flags:[`PARTIAL_SOFT; `DFA_RESTART] ~workspace "223x
 - : int array = [|0; 3; 0|]
 ```
 
-Please refer to the documentation of `pcre2_dfa_match` and check out the
-`dfa_restart` example for more info.
+Refer to the `pcre2_dfa_exec` documentation and the `dfa_restart` example for
+more information.
 
-### Contact Information and Contributing
+## Contact Information and Contributing
 
-Please submit bugs reports, feature requests, contributions and similar to
-the [GitHub issue tracker](https://github.com/mmottl/pcre-ocaml/issues).
+Submit bug reports, feature requests, and contributions via the
+[GitHub issue tracker](https://github.com/camlp5/pcre2-ocaml/issues).
 
-Up-to-date information is available at: <https://mmottl.github.io/pcre-ocaml>
+For the latest information, visit: <https://github.com/camlp5/pcre2-ocaml>
