@@ -49,6 +49,23 @@ typedef long *caml_int_ptr;
 #include <caml/fail.h>
 #include <caml/memory.h>
 #include <caml/mlvalues.h>
+#include <caml/version.h>
+
+#if (OCAML_VERSION_MAJOR == 4) && (OCAML_VERSION_MINOR < 12)
+#define Val_none (Val_long(0))
+#define Some_val(v) Field(v, 0)
+#define Tag_some 0
+#define Is_none(v) ((v) == Val_none)
+#define Is_some(v) Is_block(v)
+
+CAMLexport value caml_alloc_some(value v)
+{
+  CAMLparam1(v);
+  value some = caml_alloc_small(1, 0);
+  Field(some, 0) = v;
+  CAMLreturn(some);
+}
+#endif
 
 #define PCRE2_CODE_UNIT_WIDTH 8
 
@@ -544,8 +561,8 @@ CAMLprim value pcre2_match_stub0(int64_t v_opt, value v_rex, intnat v_pos,
       value v_cof = Field(v_maybe_cof, 0);
       value v_substrings;
       PCRE2_UCHAR *subj = caml_stat_alloc(sizeof(char) * len);
-      int workspace_len;
-      int *workspace;
+      int workspace_len = 0;
+      int *workspace = NULL;
       struct cod cod = {0, (value *)NULL, (value *)NULL, (value)NULL};
       pcre2_match_context *new_mcontext = pcre2_match_context_copy(mcontext);
 

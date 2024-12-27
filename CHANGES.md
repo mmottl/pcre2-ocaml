@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.0.2 (2024-12-26)
+
+- Thanks to @nojb, try to get it working for ocaml [4.08, 4.11]
+
 ## 8.0.1 (2024-12-20)
 
 - Merged all changes from old `pcre-ocaml`.
