@@ -1,4 +1,8 @@
 (test
+ (name old_pcre2_tests)
+ (libraries pcre2 ounit2))
+
+(test
  (name pcre2_tests)
  (libraries pcre2 ounit2))
 
