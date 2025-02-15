@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.0.3 (2025-02-15)
+
+- ugh: forgot to make the function caml_alloc_some (for ocaml [4.08, 4.11] support) static.  It clashes with the same function from the package `pcre`
+
 ## 8.0.2 (2024-12-26)
 
 - Thanks to @nojb, try to get it working for ocaml [4.08, 4.11]

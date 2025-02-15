@@ -58,7 +58,7 @@ typedef long *caml_int_ptr;
 #define Is_none(v) ((v) == Val_none)
 #define Is_some(v) Is_block(v)
 
-CAMLexport value caml_alloc_some(value v)
+CAMLexport static value caml_alloc_some(value v)
 {
   CAMLparam1(v);
   value some = caml_alloc_small(1, 0);
