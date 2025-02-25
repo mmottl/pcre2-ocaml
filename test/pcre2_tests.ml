@@ -633,6 +633,11 @@ let test_pcre2_envsubst_via_replace ctxt =
   in
   assert_equal "...res1...res2..." (pcre2_envsubst f "...$(A)...${B}...")
 
+let test_pcre2_bad_pattern_exception ctxt =
+  assert_raises (Pcre2.Error(Pcre2.BadPattern("missing closing parenthesis", 3)))
+    (fun _ ->
+      Pcre2.regexp "a(b")
+
 let suite =
   "Test pa_ppx_regexp" >:::
     ["pcre2 simple_match" >:: test_pcre2_simple_match;
@@ -647,6 +652,9 @@ let suite =
      "pcre2 subst" >:: test_pcre2_subst;
      "pcre2 ocamlfind bits" >:: test_pcre2_ocamlfind_bits;
      "pcre2 envsubst via replace" >:: test_pcre2_envsubst_via_replace;
-     "pcre only_regexps" >:: test_special_char_regexps]
+     "pcre only_regexps" >:: test_special_char_regexps;
+     "pcre BadPattern exception" >:: test_pcre2_bad_pattern_exception
+    ]
+
 
 let _ = if not !(Sys.interactive) then run_test_tt_main suite
