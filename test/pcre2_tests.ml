@@ -633,10 +633,19 @@ let test_pcre2_envsubst_via_replace ctxt =
   in
   assert_equal "...res1...res2..." (pcre2_envsubst f "...$(A)...${B}...")
 
-let test_pcre2_bad_pattern_exception ctxt =
-  assert_raises (Pcre2.Error(Pcre2.BadPattern("missing closing parenthesis", 3)))
-    (fun _ ->
-      Pcre2.regexp "a(b")
+
+let bad_pattern ctxt =
+  let open Pcre2 in
+  try
+    ignore (regexp "?");
+    assert_failure "Regex should fail to parse"
+  with Error (BadPattern (s, _)) ->
+    assert_bool
+      "String contains a zero byte. In 8-bit mode this indicates an error in \
+       the creation of the error message since strings created by PCRE2 should \
+       be null terminated."
+      (not @@ String.exists (fun c -> c = '\000') s)
+
 
 let suite =
   "Test pa_ppx_regexp" >:::
@@ -653,7 +662,7 @@ let suite =
      "pcre2 ocamlfind bits" >:: test_pcre2_ocamlfind_bits;
      "pcre2 envsubst via replace" >:: test_pcre2_envsubst_via_replace;
      "pcre only_regexps" >:: test_special_char_regexps;
-     "pcre BadPattern exception" >:: test_pcre2_bad_pattern_exception
+     "bad_pattern"   >:: bad_pattern
     ]
 
 

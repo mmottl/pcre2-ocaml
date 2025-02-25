@@ -250,12 +250,18 @@ static inline void raise_match_limit(void) { raise_pcre2_error(Val_int(3)); }
 static inline void raise_depth_limit(void) { raise_pcre2_error(Val_int(4)); }
 static inline void raise_workspace_size(void) { raise_pcre2_error(Val_int(5)); }
 
+/* The length of msg_buf in this function is chosen to be larger than
+   any existing error-message in pcre2_error.c.  Currently (Feb 25, 2025, Git
+   commit 0880a6c33a51e2dfded8864a6bcc8ae4e9a90f89),  the longest error-message
+   is about 110 chars.  Uncomfortably close to 128, so I doubled the length to 256.
+*/
+
 static inline void raise_bad_pattern(int code, size_t pos) {
   CAMLparam0();
   CAMLlocal2(v_msg, v_arg);
-  char msg[128] ;
-  pcre2_get_error_message(code, (PCRE2_UCHAR *)msg, 128);
-  v_msg = caml_copy_string(msg) ;
+  char msg_buf[128];
+  pcre2_get_error_message(code, (PCRE2_UCHAR *)msg_buf, (sizeof msg_buf) / (sizeof (PCRE2_UCHAR)));
+  v_msg = caml_copy_string(msg_buf);
   v_arg = caml_alloc_small(2, 0);
   Field(v_arg, 0) = v_msg;
   Field(v_arg, 1) = Val_int(pos);
