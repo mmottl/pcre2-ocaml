@@ -1,5 +1,11 @@
 # Changelog
 
+## 8.0.4 (2025-02-24)
+
+- change the C code for raising Pcre2.BadPattern to create a short
+  OCaml string, not 128-char (so that it won't contain a bunch of
+  garbage at the end).
+
 ## 8.0.3 (2025-02-15)
 
 - ugh: forgot to make the function caml_alloc_some (for ocaml [4.08, 4.11] support) static.  It clashes with the same function from the package `pcre`
