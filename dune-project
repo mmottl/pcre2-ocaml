@@ -2,6 +2,8 @@
 
 (name pcre2)
 
+(version 8.0.4)
+
 (generate_opam_files true)
 
 (source
