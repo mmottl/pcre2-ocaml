@@ -1,34 +1,54 @@
 # Changelog
 
-## 8.0.4 (2025-02-24)
+## [8.0.4] - 2025-02-24
 
-- change the C code for raising Pcre2.BadPattern to create a short OCaml string,
-  not 128-char (so that it won't contain a bunch of garbage at the end).
+### Fixed
 
-## 8.0.3 (2025-02-15)
+- Ensure the `Pcre2.BadPattern` exception allocates short OCaml strings to avoid
+  trailing garbage.
 
-- ugh: forgot to make the function caml_alloc_some (for ocaml [4.08, 4.11]
-  support) static. It clashes with the same function from the package `pcre`
+## [8.0.3] - 2025-02-15
 
-## 8.0.2 (2024-12-26)
+### Fixed
 
-- Thanks to @nojb, try to get it working for ocaml [4.08, 4.11]
+- Make `caml_alloc_some` static to prevent clashes with the `pcre` package when
+  targeting OCaml 4.08-4.11.
 
-## 8.0.1 (2024-12-20)
+## [8.0.2] - 2024-12-26
 
-- Merged all changes from old `pcre-ocaml`.
+### Added
 
-- Fixed a bug in the `full_split` function where non-capturing groups were not
-  identified as such.
+- Restore compatibility with OCaml 4.08 through 4.11. Thanks to @nojb.
 
-## 7.5.3 (2024-12-23)
+## [8.0.1] - 2024-12-20
 
-- @mmottl fixed bug in `full_split`
+### Changed
 
-## 7.5.2 (2023-09-06)
+- Merge the legacy `pcre-ocaml` changes into `pcre2-ocaml`.
 
-- Fixed bug in `full_split`, added first unit-test for same
+### Fixed
 
-## 7.5.1 (2023-09-01)
+- Correct `full_split` so that non-capturing groups are identified properly.
 
-- Created pcre2-ocaml bindings based on original pcre-ocaml project
+## [7.5.3] - 2024-12-23
+
+### Fixed
+
+- Address the `full_split` regression. Thanks to @mmottl.
+
+## [7.5.2] - 2023-09-06
+
+### Added
+
+- Introduce the initial unit test that exercises `full_split`.
+
+### Fixed
+
+- Resolve the `full_split` bug affecting split classification.
+
+## [7.5.1] - 2023-09-01
+
+### Added
+
+- Create the initial `pcre2-ocaml` bindings derived from the original
+  `pcre-ocaml` project.
