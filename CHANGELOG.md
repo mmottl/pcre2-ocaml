@@ -1,11 +1,26 @@
 # Changelog
 
-## [8.0.4] - 2025-02-24
+## [8.0.4] - 2025-10-19
+
+### Added
+
+- Provide a `make test` convenience target and generate
+  `lib/compile_commands.json` to streamline running the suite and IDE
+  integration.
+- Introduce GitHub automation (Dependabot updates plus linting, formatting, and
+  pre-commit workflows) mirroring the original `pcre-ocaml` project.
+
+### Changed
+
+- Reorganize the repository to match the upstream layout, moving library sources
+  to `lib/`, refreshing documentation, and updating example descriptions.
 
 ### Fixed
 
 - Ensure the `Pcre2.BadPattern` exception allocates short OCaml strings to avoid
-  trailing garbage.
+  trailing garbage or embedded NUL bytes in error messages.
+- Correct the offset-vector pointer cast in `pcre2_stubs.c` to remove undefined
+  behavior when copying match offsets.
 
 ## [8.0.3] - 2025-02-15
 
